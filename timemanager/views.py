@@ -3,6 +3,8 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
 import json
+from django.utils import timezone
+import pytz
 
 
 def index(request):
@@ -51,9 +53,11 @@ def calculate_time(request):
             in_time = first_row.get("Event Date", "").split()[1] if len(first_row.get("Event Date", "").split()) > 1 else "N/A"
 
             # Convert Event Date to datetime objects
+            ist = pytz.timezone('Asia/Kolkata')
             for row in all_rows:
                 try:
-                    row["Event Date"] = datetime.strptime(row["Event Date"], "%d-%m-%Y %H:%M:%S")
+                    naive_dt = datetime.strptime(row["Event Date"], "%d-%m-%Y %H:%M:%S")
+                    row["Event Date"] = ist.localize(naive_dt)  # Make timezone-aware
                 except ValueError:
                     continue
 
@@ -177,7 +181,7 @@ def calculate_time(request):
                     result['overtime_indicator'] = f"+{ot_hours}:{ot_mins:02d} hrs"
 
             elif currently_logged_in:
-                current_time = datetime.now()
+                current_time = timezone.localtime()
                 total_time = current_time - first_in_time
                 actual_working_time = total_time - break_time
                 total_minutes = int(actual_working_time.total_seconds() / 60)
